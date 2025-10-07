@@ -1,0 +1,112 @@
+// This is the Prisma schema file
+
+// Enums
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ProductCategory {
+  ELECTRONICS
+  FASHION
+  HOME
+  BEAUTY
+}
+
+// Models
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  name        String?
+  accounts    Account[]
+  sessions    Session[]
+  orders      Order[]
+}
+
+model Account {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  provider    String
+  providerAccountId String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  expires     DateTime
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String
+  products    Product[]
+}
+
+model Product {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  description       String?
+  categoryId        Int
+  variations        ProductVariation[]
+  category         Category             @relation(fields: [categoryId], references: [id])
+}
+
+model ProductVariation {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  name        String
+  price       Float
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model ProductPrompt {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  prompt      String
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model Order {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  total       Float
+  items       OrderItem[]
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model OrderItem {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  productId   Int
+  quantity    Int
+  order       Order    @relation(fields: [orderId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  content     String
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id          Int      @id @default(autoincrement())
+  orderId     Int
+  status      PaymentStatus
+  order       Order    @relation(fields: [orderId], references: [id])
+}
+
+model ProviderKey {
+  id          Int      @id @default(autoincrement())
+  provider    String
+  key         String
+}
