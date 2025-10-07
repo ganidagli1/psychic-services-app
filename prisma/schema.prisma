@@ -1,112 +1,148 @@
-// This is the Prisma schema file
+// This is the Prisma schema for the psychic services application
+
+// Datasource for PostgreSQL
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Generator for Prisma Client
+generator client {
+  provider = "prisma-client-js"
+}
 
 // Enums
 enum Role {
-  USER
+  BUYER
+  SELLER
   ADMIN
 }
 
-enum PaymentStatus {
+enum OrderStatus {
   PENDING
-  COMPLETED
+  PAID
+  IN_PROGRESS
+  DELIVERED
+  CANCELED
+}
+
+enum PaymentStatus {
+  INITIATED
+  AUTHORIZED
+  CAPTURED
+  REFUNDED
   FAILED
 }
 
-enum ProductCategory {
-  ELECTRONICS
-  FASHION
-  HOME
-  BEAUTY
+enum AIProvider {
+  OPENAI
+  GEMINI
+  DEEPSEEK
+  CUSTOM
+}
+
+enum MessageSenderType {
+  BUYER
+  SELLER
+  SYSTEM
 }
 
 // Models
 model User {
-  id          Int       @id @default(autoincrement())
-  email       String    @unique
-  name        String?
-  accounts    Account[]
-  sessions    Session[]
-  orders      Order[]
+  id                String   @id @default(cuid())
+  name              String?
+  email             String?  @unique
+  emailVerified     DateTime?
+  image             String?
+  accounts          Account[]
+  sessions          Session[]
+  orders            Order[]
 }
 
 model Account {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  provider    String
+  id               String   @id @default(cuid())
+  user             User     @relation(fields: [userId], references: [id])
+  userId          String
+  provider         String
   providerAccountId String
-  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Session {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  expires     DateTime
-  user        User     @relation(fields: [userId], references: [id])
+  id                String   @id @default(cuid())
+  sessionToken      String   @unique
+  user              User     @relation(fields: [userId], references: [id])
+  userId            String
+  expires           DateTime
 }
 
 model Category {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(cuid())
   name        String
+  description String?
   products    Product[]
 }
 
 model Product {
-  id                Int                 @id @default(autoincrement())
+  id                String   @id @default(cuid())
   name              String
-  description       String?
-  categoryId        Int
+  slug              String   @unique
+  price             Float
+  category          Category @relation(fields: [categoryId], references: [id])
+  categoryId       String
   variations        ProductVariation[]
-  category         Category             @relation(fields: [categoryId], references: [id])
+  prompts           ProductPrompt[]
 }
 
 model ProductVariation {
-  id          Int      @id @default(autoincrement())
-  productId   Int
-  name        String
-  price       Float
-  product     Product  @relation(fields: [productId], references: [id])
+  id          String @id @default(cuid())
+  product    Product @relation(fields: [productId], references: [id])
+  productId   String
+  options     Json // for unlimited options
 }
 
 model ProductPrompt {
-  id          Int      @id @default(autoincrement())
-  productId   Int
-  prompt      String
-  product     Product  @relation(fields: [productId], references: [id])
+  id        String @id @default(cuid())
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+  prompt    String
 }
 
 model Order {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  total       Float
-  items       OrderItem[]
-  user        User     @relation(fields: [userId], references: [id])
+  id               String   @id @default(cuid())
+  user             User?    @relation(fields: [userId], references: [id])
+  userId          String?
+  orderStatus      OrderStatus
+  items            OrderItem[]
+  payment          Payment?
 }
 
 model OrderItem {
-  id          Int      @id @default(autoincrement())
-  orderId     Int
-  productId   Int
-  quantity    Int
-  order       Order    @relation(fields: [orderId], references: [id])
-  product     Product  @relation(fields: [productId], references: [id])
+  id                String   @id @default(cuid())
+  order             Order    @relation(fields: [orderId], references: [id])
+  orderId          String
+  product          Product   @relation(fields: [productId], references: [id])
+  productId       String
+  personalization   String?  @db.VarChar(1000) // 1000-char personalization field
 }
 
 model Message {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  content     String
-  user        User     @relation(fields: [userId], references: [id])
+  id                String   @id @default(cuid())
+  content           String
+  senderType        MessageSenderType
+  order             Order    @relation(fields: [orderId], references: [id])
+  orderId          String
 }
 
 model Payment {
-  id          Int      @id @default(autoincrement())
-  orderId     Int
-  status      PaymentStatus
-  order       Order    @relation(fields: [orderId], references: [id])
+  id                String   @id @default(cuid())
+  order             Order    @relation(fields: [orderId], references: [id])
+  orderId          String
+  status            PaymentStatus
+  provider         String // Stripe/PayPal
 }
 
 model ProviderKey {
-  id          Int      @id @default(autoincrement())
-  provider    String
-  key         String
+  id                String   @id @default(cuid())
+  provider         AIProvider
+  key              String
 }
